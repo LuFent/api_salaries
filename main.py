@@ -1,6 +1,7 @@
 import requests
 import sys
 import os
+
 from dotenv import load_dotenv
 
 
@@ -139,6 +140,7 @@ def main():
     load_dotenv()
     super_job_api_token = os.getenv("SUPER_JOB_KEY")
     languages = ["JavaScript", "Java", "Python", "Ruby", "PHP", "C++", "CSS", "C#", "C", "Go"]
+    print(" ".join(languages))
     hh_languages_dict = dict()
     sj_languages_dict = dict()
 
