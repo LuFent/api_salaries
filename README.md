@@ -2,7 +2,6 @@
 
 Получает по API сайтов [Headhunter](https://hh.ru/) и [Superjob](https://www.superjob.ru/) информацию о зарплатах программистов на различных языках и выводит информацию в виде таблицы.
 
-[пример](http://example.com/ "Необязательная подсказка")
 
 Список языков - JavaScript, Java, Python, Ruby, PHP, C++, CSS, C#, C, Go.
 
@@ -25,7 +24,11 @@
   pip install -r requirements.txt
 ```
 
-- [Получить API токен сервиса superjob](https://api.superjob.ru/), создать файл .env в который записать строку SUPER_JOB_KEY=<Ваш токен>.
+
+- [Получить API токен сервиса superjob](https://api.superjob.ru/), создать файл .env в который записать строку
+```
+SUPER_JOB_KEY=<Ваш токен>.
+```
 
 
 - Запустить скрипт - команда:

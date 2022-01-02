@@ -3,7 +3,6 @@ import os
 
 from dotenv import load_dotenv
 from terminaltables import DoubleTable
-from tqdm import tqdm
 
 
 def predict_rub_salary(sal_from, sal_to):
@@ -20,61 +19,74 @@ def predict_rub_salary(sal_from, sal_to):
         return (sal_from + sal_to)/2
 
 
-def get_hh_job_page_data(area_id, period, language, page_number):
-    params = {"area": area_id,
-              "period": period,
-              "text": language,
-              "page": page_number}
+def get_hh_job_page_salary(area_id, period, language, page_number):
     url = "https://api.hh.ru/vacancies"
-    response = requests.get(url, params=params)
+    response = requests.get(url, params={"area": area_id,
+                                         "period": period,
+                                         "text": language,
+                                         "page": page_number})
+
     response.raise_for_status()
     response = response.json()
+    pages_amount = response["pages"]
     vacs_count = response["found"]
     response = response["items"]
     vacs_processed = 0
     summary = 0
 
     for vac in response:
-        salary_dict = vac["salary"]
-        if salary_dict and salary_dict["currency"] == "RUR":
-            salary = predict_rub_salary(salary_dict["from"], salary_dict["to"])
+        raw_salary = vac["salary"]
+        if raw_salary and raw_salary["currency"] == "RUR":
+            salary = predict_rub_salary(raw_salary["from"], raw_salary["to"])
             if salary:
                 summary += int(salary)
                 vacs_processed += 1
 
-    return vacs_count, vacs_processed, summary
+    return vacs_count, vacs_processed, summary, pages_amount
 
 
-def get_hh_language_data(language, area_id, period):
+def get_hh_language_salary(language, area_id, period):
     params = {"area": area_id,
               "period": period,
               "text": language,
               "page": -1}
 
-    language_data = {"vacancies_found": 0,
-                     "vacancies_processed": 0,
-                     "average_salary": 0}
+    language_salary = {"vacancies_found": 0,
+                       "vacancies_processed": 0,
+                       "average_salary": 0}
     while True:
-        try:
-            params["page"] += 1
-            vacancies_found, vac_processed, summary = get_hh_job_page_data(*params.values())
-            language_data["vacancies_found"] = vacancies_found
-            language_data["vacancies_processed"] += vac_processed
-            language_data["average_salary"] += summary
-        except Exception:
-            language_data["average_salary"] = int(language_data["average_salary"]/language_data["vacancies_processed"])
-            return language_data
+
+        params["page"] += 1
+        vacancies_found, vac_processed, summary, pages_amount = \
+            get_hh_job_page_salary(*params.values())
+        language_salary["vacancies_found"] = vacancies_found
+        language_salary["vacancies_processed"] += vac_processed
+        language_salary["average_salary"] += summary
+
+        if pages_amount - 1 == params["page"]:
+            if language_salary["vacancies_processed"] != 0:
+                language_salary["average_salary"] /= \
+                    language_salary["vacancies_processed"]
+
+                language_salary["average_salary"] =\
+                    int(language_salary["average_salary"])
+                return language_salary
+            else:
+                language_salary["vacancies_found"] = 0
+                language_salary["vacancies_processed"] = 0
+                language_salary["average_salary"] = 0
+                return language_salary
 
 
-def get_sj_page_data(language, town, period, vacs_per_page, page_number, headers):
-    params = {"keyword": f"Програмист {language}",
-              "town": town,
-              "period": period,
-              "count": vacs_per_page,
-              "page": page_number}
-
+def get_sj_page_salary(language, town, period,
+                       vacs_per_page, page_number, headers):
     url = "https://api.superjob.ru/2.0/vacancies/"
-    response = requests.get(url, params=params, headers=headers)
+    response = requests.get(url, headers=headers,
+                            params={"keyword": f"Програмист {language}",
+                                               "town": town,
+                                               "period": period,
+                                               "count": vacs_per_page,
+                                               "page": page_number})
     response.raise_for_status()
     response = response.json()
     vacs_count = response["total"]
@@ -90,63 +102,74 @@ def get_sj_page_data(language, town, period, vacs_per_page, page_number, headers
     return vacs_count, vacs_processed, summary, response["more"]
 
 
-def get_sj_language_data(language, api_key, town, period, vacs_per_page):
+def get_sj_language_salary(language, api_key, town, period, vacs_per_page):
 
-    params = {"keyword": f"Програмист {language}", "town": town, "period": period, "count": vacs_per_page, "page": 0}
+    params = {"keyword": f"Програмист {language}", "town": town,
+              "period": period, "count": vacs_per_page, "page": 0}
+
     headers = {"X-Api-App-Id": api_key}
 
-    language_data = {"vacancies_found": 0,
-                     "vacancies_processed": 0,
-                     "average_salary": 0}
+    language_salary = {"vacancies_found": 0,
+                       "vacancies_processed": 0,
+                       "average_salary": 0}
 
     while True:
-        vacs_count, vacs_processed, summary, if_next = get_sj_page_data(*params.values(), headers)
-        language_data["vacancies_found"] = vacs_count
-        language_data["vacancies_processed"] += vacs_processed
-        language_data["average_salary"] += summary
+        vacs_count, vacs_processed, summary, has_next_page = \
+            get_sj_page_salary(*params.values(), headers)
+        language_salary["vacancies_found"] = vacs_count
+        language_salary["vacancies_processed"] += vacs_processed
+        language_salary["average_salary"] += summary
         params["page"] += 1
 
-        if not if_next:
+        if not has_next_page:
             break
 
-    language_data["average_salary"] = int(language_data["average_salary"] / language_data["vacancies_processed"])
-    return language_data
+    if language_salary["vacancies_processed"] != 0:
+        language_salary["average_salary"] /= language_salary["vacancies_processed"]
+        language_salary["average_salary"] = int(language_salary["average_salary"])
+        return language_salary
+    else:
+        language_salary["vacancies_found"] = 0
+        language_salary["vacancies_processed"] = 0
+        language_salary["average_salary"] = 0
+        return language_salary
 
 
-def draw_table(lang_dict, title):
-    table_lines = [["Язык програмирования", "Вакансий найдено", "Вакансий обработано", "Средняя з.п."]]
-    for lang, data in lang_dict.items():
-        table_line = list()
-        table_line.append(lang)
-        for cell in data.values():
-            table_line.append(cell)
+def draw_table(table_filling, title):
+    table_lines = [["Язык програмирования", "Вакансий найдено",
+                    "Вакансий обработано", "Средняя з.п."]]
+
+    for lang, lang_lines in table_filling.items():
+        table_line = [lang]
+        table_line.extend(lang_lines.values())
         table_lines.append(table_line)
 
     table = DoubleTable(table_lines, title=title)
-    print(table.table)
-    print()
+    return table.table
 
 
 def main():
     load_dotenv()
     super_job_api_token = os.getenv("SUPER_JOB_KEY")
-    languages = ["JavaScript", "Java", "Python", "Ruby", "PHP", "C++", "CSS", "C#", "C", "Go"]
-    hh_languages_data = dict()
-    sj_languages_data = dict()
+    languages = ["JavaScript", "Java", "Python",
+                 "Ruby", "PHP", "C++", "CSS", "C#", "C", "Go"]
+    hh_languages_salary = dict()
+    sj_languages_salary = dict()
 
     city = "Moscow"
     period = 30
     area_id = 1
 
-    with tqdm(total=len(languages)) as pbar:
-        for lang in languages:
-            pbar.set_description(f"processing {lang} vacancies")
-            hh_languages_data[lang] = get_hh_language_data(lang, area_id, period)
-            sj_languages_data[lang] = get_sj_language_data(lang, super_job_api_token, city, period, 100)
-            pbar.update(1)
+    for lang in languages:
+        hh_languages_salary[lang] = get_hh_language_salary(lang,
+                                                           area_id, period)
+        sj_languages_salary[lang] = get_sj_language_salary(lang, super_job_api_token,
+                                                           city, period, 100)
 
-    draw_table(hh_languages_data, "HeadHunter Moscow")
-    draw_table(sj_languages_data, "SuperJob Moscow")
+    print(draw_table(hh_languages_salary, "HeadHunter Moscow"))
+    print()
+    print()
+    print(draw_table(sj_languages_salary, "SuperJob Moscow"))
 
 
 if __name__ == "__main__":
