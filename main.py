@@ -3,6 +3,7 @@ import os
 
 from dotenv import load_dotenv
 from terminaltables import DoubleTable
+from itertools import count
 
 
 def predict_rub_salary(sal_from, sal_to):
@@ -46,36 +47,25 @@ def get_hh_job_page_salary(area_id, period, language, page_number):
 
 
 def get_hh_language_salary(language, area_id, period):
-    params = {"area": area_id,
-              "period": period,
-              "text": language,
-              "page": -1}
+    total_vacancies_processed = 0
+    total_salary = 0
+    average_salary = 0
 
-    language_salary = {"vacancies_found": 0,
-                       "vacancies_processed": 0,
-                       "average_salary": 0}
-    while True:
-
-        params["page"] += 1
+    for page_number in count(0, 1):
         vacancies_found, vac_processed, summary, pages_amount = \
-            get_hh_job_page_salary(*params.values())
-        language_salary["vacancies_found"] = vacancies_found
-        language_salary["vacancies_processed"] += vac_processed
-        language_salary["average_salary"] += summary
+            get_hh_job_page_salary(area_id, period, language, page_number)
 
-        if pages_amount - 1 == params["page"]:
-            if language_salary["vacancies_processed"] != 0:
-                language_salary["average_salary"] /= \
-                    language_salary["vacancies_processed"]
+        total_vacancies_found = vacancies_found
+        total_vacancies_processed += vac_processed
+        total_salary += summary
 
-                language_salary["average_salary"] =\
-                    int(language_salary["average_salary"])
-                return language_salary
-            else:
-                language_salary["vacancies_found"] = 0
-                language_salary["vacancies_processed"] = 0
-                language_salary["average_salary"] = 0
-                return language_salary
+        if pages_amount - 1 == page_number:
+            if total_vacancies_processed != 0:
+                average_salary = int(total_salary / total_vacancies_processed)
+
+            return {"vacancies_found": total_vacancies_found,
+                    "vacancies_processed": total_vacancies_processed,
+                    "average_salary": average_salary}
 
 
 def get_sj_page_salary(language, town, period,
@@ -103,36 +93,31 @@ def get_sj_page_salary(language, town, period,
 
 
 def get_sj_language_salary(language, api_key, town, period, vacs_per_page):
-
-    params = {"keyword": f"Програмист {language}", "town": town,
-              "period": period, "count": vacs_per_page, "page": 0}
-
     headers = {"X-Api-App-Id": api_key}
 
-    language_salary = {"vacancies_found": 0,
-                       "vacancies_processed": 0,
-                       "average_salary": 0}
+    total_vacancies_processed = 0
+    total_salary = 0
+    average_salary = 0
 
-    while True:
+    for page_number in count(0, 1):
+
         vacs_count, vacs_processed, summary, has_next_page = \
-            get_sj_page_salary(*params.values(), headers)
-        language_salary["vacancies_found"] = vacs_count
-        language_salary["vacancies_processed"] += vacs_processed
-        language_salary["average_salary"] += summary
-        params["page"] += 1
+            get_sj_page_salary(language, town, period, vacs_per_page,
+                               page_number, headers)
+
+        total_vacancies_found = vacs_count
+        total_vacancies_processed += vacs_processed
+        total_salary += summary
 
         if not has_next_page:
             break
 
-    if language_salary["vacancies_processed"] != 0:
-        language_salary["average_salary"] /= language_salary["vacancies_processed"]
-        language_salary["average_salary"] = int(language_salary["average_salary"])
-        return language_salary
-    else:
-        language_salary["vacancies_found"] = 0
-        language_salary["vacancies_processed"] = 0
-        language_salary["average_salary"] = 0
-        return language_salary
+    if vacs_processed != 0:
+        average_salary = int(total_salary/vacs_processed)
+
+    return {"vacancies_found": total_vacancies_found,
+            "vacancies_processed": total_vacancies_processed,
+            "average_salary": average_salary}
 
 
 def draw_table(table_filling, title):
@@ -153,6 +138,7 @@ def main():
     super_job_api_token = os.getenv("SUPER_JOB_KEY")
     languages = ["JavaScript", "Java", "Python",
                  "Ruby", "PHP", "C++", "CSS", "C#", "C", "Go"]
+
     hh_languages_salary = dict()
     sj_languages_salary = dict()
 
