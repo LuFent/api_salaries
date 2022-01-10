@@ -25,7 +25,8 @@ def get_hh_job_page_salary(area_id, period, language, page_number):
     response = requests.get(url, params={"area": area_id,
                                          "period": period,
                                          "text": language,
-                                         "page": page_number})
+                                         "page": page_number
+                                         })
 
     response.raise_for_status()
     response = response.json()
@@ -59,24 +60,29 @@ def get_hh_language_salary(language, area_id, period):
         total_vacancies_processed += vac_processed
         total_salary += summary
 
-        if pages_amount - 1 == page_number:
+        if pages_amount - 1 >= page_number:
             if total_vacancies_processed != 0:
                 average_salary = int(total_salary / total_vacancies_processed)
 
-            return {"vacancies_found": total_vacancies_found,
-                    "vacancies_processed": total_vacancies_processed,
-                    "average_salary": average_salary}
+            return {
+                "vacancies_found": total_vacancies_found,
+                "vacancies_processed": total_vacancies_processed,
+                "average_salary": average_salary
+            }
 
 
 def get_sj_page_salary(language, town, period,
                        vacs_per_page, page_number, headers):
     url = "https://api.superjob.ru/2.0/vacancies/"
     response = requests.get(url, headers=headers,
-                            params={"keyword": f"Програмист {language}",
-                                               "town": town,
-                                               "period": period,
-                                               "count": vacs_per_page,
-                                               "page": page_number})
+                            params={
+                                "keyword": f"Програмист {language}",
+                                "town": town,
+                                "period": period,
+                                "count": vacs_per_page,
+                                "page": page_number
+                            })
+
     response.raise_for_status()
     response = response.json()
     vacs_count = response["total"]
@@ -112,12 +118,14 @@ def get_sj_language_salary(language, api_key, town, period, vacs_per_page):
         if not has_next_page:
             break
 
-    if vacs_processed != 0:
+    if not vacs_processed:
         average_salary = int(total_salary/vacs_processed)
 
-    return {"vacancies_found": total_vacancies_found,
-            "vacancies_processed": total_vacancies_processed,
-            "average_salary": average_salary}
+    return {
+        "vacancies_found": total_vacancies_found,
+        "vacancies_processed": total_vacancies_processed,
+        "average_salary": average_salary
+    }
 
 
 def draw_table(table_filling, title):
