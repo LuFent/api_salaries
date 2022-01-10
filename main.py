@@ -137,9 +137,9 @@ def draw_table(table_filling, title):
     table_lines = [["Язык програмирования", "Вакансий найдено",
                     "Вакансий обработано", "Средняя з.п."]]
 
-    for lang, lang_lines in table_filling.items():
+    for lang, land_table_cells in table_filling.items():
         table_line = [lang]
-        table_line.extend(lang_lines.values())
+        table_line.extend(land_table_cells.values())
         table_lines.append(table_line)
 
     table = DoubleTable(table_lines, title=title)
