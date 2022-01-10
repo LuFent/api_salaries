@@ -6,7 +6,10 @@ from terminaltables import DoubleTable
 from itertools import count
 
 
-def predict_rub_salary(sal_from, sal_to):
+def predict_rub_salary(sal_from, sal_to, currency):
+    if currency != "rub" and currency != "RUR":
+        return None
+
     if not sal_from and not sal_to:
         return None
 
@@ -38,8 +41,9 @@ def get_hh_job_page_salary(area_id, period, language, page_number):
 
     for vac in response:
         raw_salary = vac["salary"]
-        if raw_salary and raw_salary["currency"] == "RUR":
-            salary = predict_rub_salary(raw_salary["from"], raw_salary["to"])
+        if raw_salary and raw_salary["currency"]:
+            currency = raw_salary["currency"]
+            salary = predict_rub_salary(raw_salary["from"], raw_salary["to"], currency)
             if salary:
                 summary += int(salary)
                 vacs_processed += 1
@@ -60,7 +64,7 @@ def get_hh_language_salary(language, area_id, period):
         total_vacancies_processed += vac_processed
         total_salary += summary
 
-        if pages_amount - 1 >= page_number:
+        if pages_amount - 1 == page_number:
             if total_vacancies_processed != 0:
                 average_salary = int(total_salary / total_vacancies_processed)
 
@@ -90,7 +94,8 @@ def get_sj_page_salary(language, town, period,
     summary = 0
 
     for job in response["objects"]:
-        salary = predict_rub_salary(job['payment_from'], job['payment_to'])
+        currency = job["currency"]
+        salary = predict_rub_salary(job['payment_from'], job['payment_to'], currency)
         if salary:
             summary += int(salary)
             vacs_processed += 1
@@ -118,7 +123,7 @@ def get_sj_language_salary(language, api_key, town, period, vacs_per_page):
         if not has_next_page:
             break
 
-    if not vacs_processed:
+    if vacs_processed:
         average_salary = int(total_salary/vacs_processed)
 
     return {
