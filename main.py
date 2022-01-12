@@ -60,15 +60,17 @@ def get_hh_language_salary(language, area_id, period):
         total_vacancies_processed += vac_processed
         total_salary += summary
 
-        if pages_amount - 1 == page_number:
-            if total_vacancies_processed:
-                average_salary = int(total_salary / total_vacancies_processed)
+        if pages_amount - 1 <= page_number:
+            break
 
-            return {
-                "vacancies_found": total_vacancies_found,
-                "vacancies_processed": total_vacancies_processed,
-                "average_salary": average_salary
-            }
+    if total_vacancies_processed:
+        average_salary = int(total_salary / total_vacancies_processed)
+
+    return {
+        "vacancies_found": total_vacancies_found,
+        "vacancies_processed": total_vacancies_processed,
+        "average_salary": average_salary
+    }
 
 
 def get_sj_page_salary(language, town, period,
