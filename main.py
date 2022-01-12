@@ -6,10 +6,7 @@ from terminaltables import DoubleTable
 from itertools import count
 
 
-def predict_rub_salary(sal_from, sal_to, currency):
-    if currency != "rub" and currency != "RUR":
-        return None
-
+def predict_rub_salary(sal_from, sal_to):
     if not sal_from and not sal_to:
         return None
 
@@ -41,9 +38,8 @@ def get_hh_job_page_salary(area_id, period, language, page_number):
 
     for vac in response:
         raw_salary = vac["salary"]
-        if raw_salary and raw_salary["currency"]:
-            currency = raw_salary["currency"]
-            salary = predict_rub_salary(raw_salary["from"], raw_salary["to"], currency)
+        if raw_salary and raw_salary["currency"] == "RUR":
+            salary = predict_rub_salary(raw_salary["from"], raw_salary["to"])
             if salary:
                 summary += int(salary)
                 vacs_processed += 1
@@ -94,11 +90,11 @@ def get_sj_page_salary(language, town, period,
     summary = 0
 
     for job in response["objects"]:
-        currency = job["currency"]
-        salary = predict_rub_salary(job['payment_from'], job['payment_to'], currency)
-        if salary:
-            summary += int(salary)
-            vacs_processed += 1
+        if job["currency"] == "rub":
+            salary = predict_rub_salary(job['payment_from'], job['payment_to'])
+            if salary:
+                summary += int(salary)
+                vacs_processed += 1
 
     return vacs_count, vacs_processed, summary, response["more"]
 
