@@ -61,7 +61,7 @@ def get_hh_language_salary(language, area_id, period):
         total_salary += summary
 
         if pages_amount - 1 == page_number:
-            if total_vacancies_processed != 0:
+            if total_vacancies_processed:
                 average_salary = int(total_salary / total_vacancies_processed)
 
             return {
