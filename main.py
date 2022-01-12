@@ -91,7 +91,7 @@ def get_sj_page_salary(language, town, period,
 
     for job in response["objects"]:
         if job["currency"] == "rub":
-            salary = predict_rub_salary(job['payment_from'], job['payment_to'])
+            salary = predict_rub_salary(job["payment_from"], job["payment_to"])
             if salary:
                 summary += int(salary)
                 vacs_processed += 1
